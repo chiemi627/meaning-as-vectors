@@ -1,0 +1,15 @@
+# Python 仮想環境（各自で作成）
+venv/
+
+# 単語ベクトルモデル（容量が大きいので各自ダウンロード: setup.sh / download_model.sh）
+model/
+
+# Python キャッシュ
+__pycache__/
+*.pyc
+
+# Claude Code 用ローカル設定
+.claude/
+
+# macOS
+.DS_Store
