@@ -26,8 +26,8 @@
 
 ```bash
 # 1. このリポジトリを取得
-git clone <このリポジトリのURL>
-cd 単語ベクトル演習
+git clone https://github.com/chiemi627/meaning-as-vectors.git
+cd meaning-as-vectors
 
 # 2. まとめてセットアップ（仮想環境作成 + ライブラリ導入 + モデルDL）
 bash setup.sh
