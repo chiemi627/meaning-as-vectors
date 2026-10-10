@@ -51,6 +51,49 @@ def normalize(word: str) -> str:
     return "".join(m.normalized_form() for m in morphs)
 
 
+def reading(word: str) -> str:
+    """読み（カタカナ）。同音・別表記の重複を見つけるのに使う。"""
+    try:
+        return "".join(m.reading_form() for m in tokenizer.tokenize(word, SplitMode.C))
+    except Exception:
+        return word
+
+
+def is_noun(word: str) -> bool:
+    """名詞を含むか（Web学習モデルの変なトークンを除外するため）"""
+    return any(m.part_of_speech()[0] == "名詞"
+               for m in tokenizer.tokenize(word, SplitMode.C))
+
+
+def clean_similar(positive, negative=None, topn=8):
+    """most_similar の結果からノイズを除いて返す。
+    除外: 1文字 / 入力語や既出結果の断片 / 同音・別表記の重複 / 非名詞。"""
+    negative = negative or []
+    inputs = positive + negative
+    raw = kv.most_similar(positive=positive, negative=negative, topn=80)
+    seen_read = {reading(w) for w in inputs}
+    accepted, out = [], []
+    for w, s in raw:
+        if len(w) < 2:
+            continue
+        if any(w in q for q in inputs):        # 入力語の断片（ロンドン→ンドン 等）
+            continue
+        if any(w in a for a in accepted):      # 既出結果の断片（イギリス→ギリス 等）
+            continue
+        r = reading(w)
+        if r in seen_read:                     # 同音・別表記の重複（犬→椀子, イヌ 等）
+            continue
+        if not is_noun(w):
+            continue
+        seen_read.add(r)
+        accepted.append(w)
+        out.append((w, s))
+        if len(out) >= topn:
+            break
+    # 万一すべて除外されたら、素の結果にフォールバック
+    return out if out else raw[:topn]
+
+
 def resolve(word: str):
     """(モデルで使う語 or None, 変換メモ or None) を返す。表記ゆれを自動で吸収。
     chiVeはSudachi正規化形が見出し語なので、まず正規化形を優先して引く。"""
@@ -113,7 +156,7 @@ with tab1:
             st.error(f"この言葉はモデルに入っていません: {', '.join(miss)}")
         else:
             show_notes(notes)
-            show_results(kv.most_similar(positive=used, topn=topn))
+            show_results(clean_similar(positive=used, topn=topn))
 
 # ===== 演習2: 単語の演算 =====
 with tab2:
@@ -134,7 +177,7 @@ with tab2:
         else:
             show_notes(pos_notes + neg_notes)
             st.markdown(f"### {a} − {b} ＋ {c} ＝")
-            show_results(kv.most_similar(positive=pos, negative=neg, topn=topn2))
+            show_results(clean_similar(positive=pos, negative=neg, topn=topn2))
 
     with st.expander("ほかの例を見る"):
         st.write("・日本 − 東京 ＋ ロンドン ＝ ?")
