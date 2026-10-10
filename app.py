@@ -5,6 +5,8 @@
 起動:  ./venv/bin/streamlit run app.py
 """
 import os
+import json
+import numpy as np
 import streamlit as st
 from gensim.models import KeyedVectors
 from sudachipy import Dictionary, SplitMode
@@ -13,6 +15,7 @@ MODEL_PATH = os.path.join(
     os.path.dirname(__file__),
     "model", "chive-1.2-mc90_gensim", "chive-1.2-mc90.kv",
 )
+EXTRA_PATH = os.path.join(os.path.dirname(__file__), "extra_words.json")
 
 st.set_page_config(page_title="意味をベクトルで考える", page_icon="🧭", layout="centered")
 
@@ -31,9 +34,32 @@ st.markdown(
 )
 
 
+def add_extra_words(kv):
+    """chiVe の語彙に無い関連語（人工内耳・情報保障など）を、
+    部品ベクトルの平均で合成して追加する。設定は extra_words.json。"""
+    try:
+        with open(EXTRA_PATH, encoding="utf-8") as f:
+            recipes = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return
+    keys, vecs = [], []
+    for term, parts in recipes.items():
+        if term.startswith("_") or not isinstance(parts, list):
+            continue  # コメント等はスキップ
+        if term in kv.key_to_index:
+            continue
+        if all(p in kv.key_to_index for p in parts):
+            keys.append(term)
+            vecs.append(np.mean([kv[p] for p in parts], axis=0))
+    if keys:
+        kv.add_vectors(keys, np.array(vecs, dtype=kv.vectors.dtype), replace=False)
+
+
 @st.cache_resource(show_spinner="日本語モデルを読み込み中…（初回のみ少し時間がかかります）")
 def load_model():
-    return KeyedVectors.load(MODEL_PATH)
+    kv = KeyedVectors.load(MODEL_PATH)
+    add_extra_words(kv)
+    return kv
 
 
 @st.cache_resource(show_spinner=False)

@@ -72,6 +72,7 @@ Finder で **`起動.command` をダブルクリック**するだけです。
 ├── requirements.txt   … 必要なライブラリ
 ├── setup.sh           … 初回セットアップ（venv + ライブラリ + モデルDL）
 ├── download_model.sh  … モデルだけダウンロードする補助スクリプト
+├── extra_words.json   … 語彙に無い関連語を部品から合成して追加する設定
 ├── 起動.command       … macOS 用ワンクリック起動
 └── model/             … モデル本体（Git には含めず各自DL）
 ```
